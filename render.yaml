@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: assignment-platform-api
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npm run prisma:generate
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: assignment-platform-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: assignment-platform-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_ENDPOINT
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+  - type: redis
+    name: assignment-platform-redis
+    ipAllowList: []
+databases:
+  - name: assignment-platform-db

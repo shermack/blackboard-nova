@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  LECTURER
+  ADMIN
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  FLAGGED
+  GRADED
+}
+
+model User {
+  id                 String             @id @default(cuid())
+  fullName           String
+  email              String             @unique
+  passwordHash       String
+  role               Role
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  createdCourses     Course[]           @relation("CourseLecturer")
+  createdAssignments Assignment[]       @relation("AssignmentCreator")
+  enrollments        CourseEnrollment[]
+  submissions        Submission[]       @relation("SubmissionStudent")
+  gradedSubmissions  Submission[]       @relation("SubmissionGrader")
+  emailCampaigns     EmailCampaign[]
+}
+
+model Course {
+  id              String             @id @default(cuid())
+  name            String
+  code            String             @unique
+  description     String?
+  lecturerId      String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  lecturer        User               @relation("CourseLecturer", fields: [lecturerId], references: [id])
+  enrollments     CourseEnrollment[]
+  assignments     Assignment[]
+  suspicionGroups SuspicionGroup[]
+}
+
+model CourseEnrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  course     Course   @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+model Assignment {
+  id             String             @id @default(cuid())
+  title          String
+  description    String
+  deadline       DateTime
+  maxMarks       Int
+  allowedTypes   String[]
+  status         AssignmentStatus   @default(PUBLISHED)
+  courseId       String
+  createdById    String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  course         Course             @relation(fields: [courseId], references: [id])
+  submissions    Submission[]
+  createdBy      User               @relation("AssignmentCreator", fields: [createdById], references: [id])
+}
+
+model Submission {
+  id               String            @id @default(cuid())
+  assignmentId     String
+  studentId        String
+  graderId         String?
+  originalFileName String
+  storageKey       String
+  mimeType         String
+  submittedAt      DateTime          @default(now())
+  status           SubmissionStatus  @default(SUBMITTED)
+  extractedText    String?
+  aiScore          Float             @default(0)
+  similarityScore  Float             @default(0)
+  suspicious       Boolean           @default(false)
+  grade            Float?
+  feedback         String?
+  assignment       Assignment        @relation(fields: [assignmentId], references: [id])
+  student          User              @relation("SubmissionStudent", fields: [studentId], references: [id])
+  grader           User?             @relation("SubmissionGrader", fields: [graderId], references: [id])
+  suspicionGroupId String?
+  suspicionGroup   SuspicionGroup?   @relation(fields: [suspicionGroupId], references: [id])
+}
+
+model SuspicionGroup {
+  id          String       @id @default(cuid())
+  courseId    String
+  reason      String
+  createdAt   DateTime     @default(now())
+  course      Course       @relation(fields: [courseId], references: [id])
+  submissions Submission[]
+}
+
+model GradePublication {
+  id            String   @id @default(cuid())
+  assignmentId  String   @unique
+  publishedAt   DateTime @default(now())
+  average       Float
+  topScore      Float
+  lowestScore   Float
+  gradeSheetUrl String?
+}
+
+model EmailCampaign {
+  id          String   @id @default(cuid())
+  senderId    String
+  subject     String
+  body        String
+  recipients  String[]
+  createdAt   DateTime @default(now())
+  sender      User     @relation(fields: [senderId], references: [id])
+}
