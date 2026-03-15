@@ -22,23 +22,33 @@ export const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://blackboard-nova-j0tfa91b2-shermacks-projects.vercel.app",
-  env.clientUrl
+  "https://blackboard-nova-j0tfa91b2-shermacks-projects.vercel.app"
 ];
+
+// also include env.clientUrl if defined
+if (env.clientUrl) {
+  allowedOrigins.push(env.clientUrl);
+}
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // allow temporarily to avoid blocking
+    origin: (origin, callback) => {
+      // allow requests without origin (like curl or mobile apps)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+
+      console.warn("Blocked by CORS:", origin);
+      return callback(null, true); // temporarily allow while developing
     },
     credentials: true
   })
 );
 
+/* -------------------------------- */
+/* SECURITY + BODY PARSING */
 /* -------------------------------- */
 
 app.use(helmet());
